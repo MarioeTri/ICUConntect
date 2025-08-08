@@ -14,11 +14,24 @@
     <!-- Collapsible Form Section -->
     <div class="collapsible-form" id="addPatientFormSection" style="max-height: 0; overflow: hidden;">
         <div class="form-wrapper">
-            <form method="POST" id="addPatientForm" action="{{ route('nurse_dashboard') }}">
+            <form method="POST" id="addPatientForm" action="{{ route('nurse_dashboard') }}" onsubmit="return preparePatientFaceImage()">
                 @csrf
                 <div class="mb-3">
                     <label for="patient_name" class="form-label">Nama Lengkap</label>
                     <input type="text" name="patient_name" id="patient_name" class="form-control shake-on-focus" placeholder="Masukkan nama lengkap" required>
+                </div>
+                <div class="mb-3">
+                    <label for="face_image" class="form-label">Foto Wajah Pasien</label>
+                    <div class="d-flex flex-column align-items-center">
+                        <video id="patientVideo" width="100%" height="auto" autoplay style="display: none;"></video>
+                        <canvas id="patientCanvas" style="display: none;"></canvas>
+                        <img id="patientPreview" class="img-fluid mb-2" style="max-height: 200px; display: none;">
+                        <input type="hidden" name="face_image" id="patient_face_image">
+                        <div class="d-flex gap-2">
+                            <button type="button" class="btn btn-primary" id="patientCaptureBtn">Ambil Foto</button>
+                            <input type="file" id="patientUploadImage" accept="image/*" class="form-control" style="max-width: 200px;">
+                        </div>
+                    </div>
                 </div>
                 <div class="mb-3">
                     <label for="family_member_name" class="form-label">Nama Anggota Keluarga</label>
@@ -41,12 +54,17 @@
                     <textarea name="address" id="address" class="form-control shake-on-focus" placeholder="Masukkan alamat"></textarea>
                 </div>
                 <div class="mb-3">
-                    <label for="room_responsible_person" class="form-label">Penanggung Jawab Ruangan</label>
-                    <input type="text" name="room_responsible_person" id="room_responsible_person" class="form-control shake-on-focus" placeholder="Masukkan nama penanggung jawab ruangan">
+                    <label for="room_responsible_nurse_id" class="form-label">Pilih Penanggung Jawab Perawat</label>
+                    <select name="room_responsible_nurse_id" id="room_responsible_nurse_id" class="form-control shake-on-focus">
+                        <option value="">-- Pilih Perawat --</option>
+                        @foreach ($nurses as $nurse)
+                            <option value="{{ $nurse->id }}">{{ $nurse->username }}</option>
+                        @endforeach
+                    </select>
                 </div>
                 <div class="mb-3">
-                    <label for="room_responsible_phone" class="form-label">Nomor Penanggung Jawab Ruangan</label>
-                    <input type="text" name="room_responsible_phone" id="room_responsible_phone" class="form-control shake-on-focus" placeholder="Masukkan nomor penanggung jawab ruangan">
+                    <label for="room_responsible_nurse_phone" class="form-label">Nomor Telepon Penanggung Jawab</label>
+                    <input type="text" name="room_responsible_nurse_phone" id="room_responsible_nurse_phone" class="form-control shake-on-focus" placeholder="Masukkan nomor telepon penanggung jawab">
                 </div>
                 <div class="mb-3">
                     <label for="doctor_name" class="form-label">Nama Dokter</label>
@@ -92,32 +110,83 @@
 </div>
 
 <script>
-    document.getElementById('toggleFormBtn').addEventListener('click', function () {
-        const formSection = document.getElementById('addPatientFormSection');
-        const formWrapper = document.querySelector('.form-wrapper');
-        if (formSection.style.maxHeight === '0px' || formSection.style.maxHeight === '') {
-            formSection.style.display = 'block';
-            const fullHeight = formWrapper.scrollHeight + 20;
-            setTimeout(() => {
-                formSection.style.maxHeight = fullHeight + 'px';
-                formSection.classList.add('active');
-                document.getElementById('patient_name').focus();
-            }, 10);
-        } else {
-            formSection.classList.remove('active');
-            setTimeout(() => {
-                formSection.style.maxHeight = '0';
-                setTimeout(() => {
-                    formSection.style.display = 'none';
-                }, 300);
-            }, 10);
-        }
+function preparePatientFaceImage() {
+    const faceImage = document.getElementById('patient_face_image').value;
+    if (!faceImage) {
+        alert('Foto wajah pasien harus diambil atau diunggah!');
+        return false;
+    }
+    return true;
+}
+
+const patientVideo = document.getElementById('patientVideo');
+const patientCanvas = document.getElementById('patientCanvas');
+const patientPreview = document.getElementById('patientPreview');
+const patientCaptureBtn = document.getElementById('patientCaptureBtn');
+const patientUploadImage = document.getElementById('patientUploadImage');
+const patientFaceImageInput = document.getElementById('patient_face_image');
+
+navigator.mediaDevices.getUserMedia({ video: true })
+    .then(stream => {
+        patientVideo.style.display = 'block';
+        patientCaptureBtn.style.display = 'block';
+        patientVideo.srcObject = stream;
+    })
+    .catch(err => {
+        console.error('Error accessing webcam:', err);
+        patientVideo.style.display = 'none';
+        patientCaptureBtn.style.display = 'none';
     });
 
-    document.querySelectorAll('.shake-on-focus').forEach(input => {
-        input.addEventListener('focus', function () {
-            console.log('Input focused:', this.id);
-        });
+patientCaptureBtn.addEventListener('click', () => {
+    patientCanvas.width = patientVideo.videoWidth;
+    patientCanvas.height = patientVideo.videoHeight;
+    patientCanvas.getContext('2d').drawImage(patientVideo, 0, 0);
+    const dataUrl = patientCanvas.toDataURL('image/jpeg');
+    patientPreview.src = dataUrl;
+    patientPreview.style.display = 'block';
+    patientFaceImageInput.value = dataUrl;
+});
+
+patientUploadImage.addEventListener('change', (event) => {
+    const file = event.target.files[0];
+    if (file) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            patientPreview.src = e.target.result;
+            patientPreview.style.display = 'block';
+            patientFaceImageInput.value = e.target.result;
+        };
+        reader.readAsDataURL(file);
+    }
+});
+
+document.getElementById('toggleFormBtn').addEventListener('click', function () {
+    const formSection = document.getElementById('addPatientFormSection');
+    const formWrapper = document.querySelector('.form-wrapper');
+    if (formSection.style.maxHeight === '0px' || formSection.style.maxHeight === '') {
+        formSection.style.display = 'block';
+        const fullHeight = formWrapper.scrollHeight + 20;
+        setTimeout(() => {
+            formSection.style.maxHeight = fullHeight + 'px';
+            formSection.classList.add('active');
+            document.getElementById('patient_name').focus();
+        }, 10);
+    } else {
+        formSection.classList.remove('active');
+        setTimeout(() => {
+            formSection.style.maxHeight = '0';
+            setTimeout(() => {
+                formSection.style.display = 'none';
+            }, 300);
+        }, 10);
+    }
+});
+
+document.querySelectorAll('.shake-on-focus').forEach(input => {
+    input.addEventListener('focus', function () {
+        console.log('Input focused:', this.id);
     });
+});
 </script>
 @endsection

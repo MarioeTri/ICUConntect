@@ -18,10 +18,11 @@ return new class extends Migration
             $table->string('emergency_phone_number')->nullable();
             $table->string('id_card_number')->nullable();
             $table->text('address')->nullable();
-            $table->string('room_responsible_person')->nullable();
-            $table->string('room_responsible_phone')->nullable();
+            $table->foreignId('room_responsible_nurse_id')->nullable()->constrained('nurses')->onDelete('set null');
+            $table->string('room_responsible_nurse_phone')->nullable();
             $table->string('doctor_name')->nullable();
             $table->string('doctor_phone')->nullable();
+            $table->text('face_image')->nullable(); // Store base64 image
             $table->timestamps();
         });
     }

@@ -19,11 +19,13 @@ class AuthController extends Controller
         $request->validate([
             'username' => 'required|string|unique:nurses',
             'password' => 'required|string|min:6|confirmed',
+            'face_image' => 'required|string', // Base64 image string
         ]);
 
         Nurse::create([
             'username' => $request->username,
             'password' => Hash::make($request->password),
+            'face_image' => $request->face_image,
         ]);
 
         Session::flash('success', 'Registrasi berhasil! Silakan login.');

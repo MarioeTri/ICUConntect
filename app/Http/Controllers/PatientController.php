@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Patient;
 use App\Models\ConditionHistory;
+use App\Models\Nurse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Session;
 use Illuminate\Support\Str;
@@ -24,14 +25,19 @@ class PatientController extends Controller
             $query->where('name', 'like', '%' . $searchQuery . '%');
         }
         $patients = $query->orderByDesc('id')->get();
-        return view('nurse_dashboard', compact('patients', 'searchQuery'));
+        $nurses = Nurse::all(['id', 'username']); // Fetch nurses for dropdown
+        return view('nurse_dashboard', compact('patients', 'searchQuery', 'nurses'));
     }
 
     public function addPatient(Request $request)
     {
         $request->validate([
             'patient_name' => 'required|string',
+            'face_image' => 'required|string', // Base64 image string
+            'room_responsible_nurse_id' => 'nullable|exists:nurses,id',
         ]);
+
+        $nurse = $request->room_responsible_nurse_id ? Nurse::find($request->room_responsible_nurse_id) : null;
 
         $patient = Patient::create([
             'name' => $request->patient_name,
@@ -41,10 +47,11 @@ class PatientController extends Controller
             'emergency_phone_number' => $request->emergency_phone_number,
             'id_card_number' => $request->id_card_number,
             'address' => $request->address,
-            'room_responsible_person' => $request->room_responsible_person,
-            'room_responsible_phone' => $request->room_responsible_phone,
+            'room_responsible_nurse_id' => $request->room_responsible_nurse_id,
+            'room_responsible_nurse_phone' => $request->room_responsible_nurse_phone,
             'doctor_name' => $request->doctor_name,
             'doctor_phone' => $request->doctor_phone,
+            'face_image' => $request->face_image,
         ]);
 
         Session::flash('success', "Pasien {$patient->name} ditambahkan dengan key: {$patient->access_key}");
@@ -53,7 +60,7 @@ class PatientController extends Controller
 
     public function patientDetail(Request $request, $id)
     {
-        $patient = Patient::findOrFail($id);
+        $patient = Patient::with('responsibleNurse')->findOrFail($id);
         $history = ConditionHistory::where('patient_id', $id)->orderByDesc('timestamp')->get(['condition', 'timestamp']);
 
         if (!Session::has('nurse')) {
