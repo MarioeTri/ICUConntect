@@ -21,3 +21,26 @@ Route::get('/patient/{id}', [PatientController::class, 'patientDetail'])->name('
 Route::post('/patient/{id}', [PatientController::class, 'updateCondition'])->middleware(NurseMiddleware::class);
 Route::get('/access/{id}', [PatientController::class, 'accessPatient'])->name('access_patient');
 Route::post('/access/{id}', [PatientController::class, 'verifyAccess']);
+
+/*
+|--------------------------------------------------------------------------
+| API Routes untuk React Frontend
+|--------------------------------------------------------------------------
+| Semua route di bawah ini akan mengembalikan data dalam bentuk JSON
+| dan bisa diakses dari frontend React + Tailwind.
+*/
+
+// Ambil semua pasien
+Route::get('/api/patients', [PatientController::class, 'apiGetPatients']);
+
+// Ambil detail pasien
+Route::get('/api/patients/{id}', [PatientController::class, 'apiGetPatientById']);
+
+// Tambah pasien baru
+Route::post('/api/patients', [PatientController::class, 'apiAddPatient']);
+
+// Update pasien
+Route::put('/api/patients/{id}', [PatientController::class, 'apiUpdatePatient']);
+
+// Hapus pasien
+Route::delete('/api/patients/{id}', [PatientController::class, 'apiDeletePatient']);

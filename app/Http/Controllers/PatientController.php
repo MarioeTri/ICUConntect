@@ -111,4 +111,59 @@ class PatientController extends Controller
         Session::flash('danger', 'Key akses salah! Hubungi perawat.');
         return redirect()->route('access_patient', $id);
     }
+
+    /*
+    |--------------------------------------------------------------------------
+    | API JSON untuk React + Tailwind
+    |--------------------------------------------------------------------------
+    */
+
+    public function apiGetPatients()
+    {
+        return response()->json(Patient::orderByDesc('id')->get());
+    }
+
+    public function apiGetPatientById($id)
+    {
+        $patient = Patient::with('responsibleNurse')->find($id);
+        if (!$patient) {
+            return response()->json(['message' => 'Data tidak ditemukan'], 404);
+        }
+        return response()->json($patient);
+    }
+
+    public function apiAddPatient(Request $request)
+    {
+        $validated = $request->validate([
+            'name' => 'required|string',
+            'family_member_name' => 'nullable|string',
+            'phone_number' => 'nullable|string',
+            'condition' => 'nullable|string',
+        ]);
+
+        $validated['access_key'] = Str::random(8);
+        $patient = Patient::create($validated);
+
+        return response()->json($patient, 201);
+    }
+
+    public function apiUpdatePatient(Request $request, $id)
+    {
+        $patient = Patient::find($id);
+        if (!$patient) {
+            return response()->json(['message' => 'Data tidak ditemukan'], 404);
+        }
+        $patient->update($request->all());
+        return response()->json($patient);
+    }
+
+    public function apiDeletePatient($id)
+    {
+        $patient = Patient::find($id);
+        if (!$patient) {
+            return response()->json(['message' => 'Data tidak ditemukan'], 404);
+        }
+        $patient->delete();
+        return response()->json(['message' => 'Data berhasil dihapus']);
+    }
 }
